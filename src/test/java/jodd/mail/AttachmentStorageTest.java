@@ -71,11 +71,10 @@ class AttachmentStorageTest {
 	}
 
 	@Test
-	@EnabledOnOs(value = {OS.AIX, OS.LINUX, OS.MAC, OS.SOLARIS})
+	@EnabledOnOs(value = {OS.AIX, OS.LINUX, OS.MAC, OS.SOLARIS, OS.WINDOWS})
 	void testAttachmentStorage() throws Exception {
-		// storing files with its message-id as file name fails on windows because value of the message-id consists of brackets
-		//		file names with brackets are not valid on window hosts
-		// see https://tools.ietf.org/html/rfc5322#section-3.6.4
+		// Used to be deactivated for Windows because of <> brackets, but filename sanitation
+		// was implemented in https://github.com/oblac/jodd-mail/issues/19
 
 		final SmtpServer smtpServer = MailServer.create()
 			.host(LOCALHOST)

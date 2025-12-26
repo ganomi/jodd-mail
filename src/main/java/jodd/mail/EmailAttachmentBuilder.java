@@ -136,7 +136,11 @@ public class EmailAttachmentBuilder {
 	 */
 	public <T extends DataSource> EmailAttachmentBuilder content(final T dataSource) {
 		this.dataSource = dataSource;
-		name(dataSource.getName());
+		// FileDataSource backed by a file in attachmentStorage may use an internal filename like {messageid}-{attCount}.
+		// So only set this public name implicitly if it was not set explicitly already.
+		if (name == null){
+			name(dataSource.getName());
+		}
 		return this;
 	}
 
@@ -224,14 +228,13 @@ public class EmailAttachmentBuilder {
 	 * @return {@link EmailAttachment}.
 	 * @throws MailException if issue with {@link DataSource}.
 	 */
-	public EmailAttachment<FileDataSource> buildFileDataSource(final String messageId, final File attachmentStorage) throws MailException {
+	public EmailAttachment<FileDataSource> buildFileDataSource(final String fileName, final File attachmentStorage) throws MailException {
 		try {
 			final FileDataSource fds;
 			if (dataSource instanceof FileDataSource) {
 				fds = (FileDataSource) dataSource;
 			} else {
-				final File file = new File(attachmentStorage, sanitizeFileName(messageId));
-				FileUtil.writeStream(file, dataSource.getInputStream());
+				final File file = writeToAttachmentStore(dataSource.getInputStream(), attachmentStorage, fileName);
 				fds = new FileDataSource(file);
 			}
 			checkDataSource();
@@ -239,6 +242,12 @@ public class EmailAttachmentBuilder {
 		} catch (final IOException ioexc) {
 			throw new MailException(ioexc);
 		}
+	}
+
+	File writeToAttachmentStore(InputStream is, File attachmentStorage, String fileName) throws IOException {
+		File file = new File(attachmentStorage, sanitizeFileName(fileName));
+		FileUtil.writeStream(file, is);
+		return file;
 	}
 
 	/**

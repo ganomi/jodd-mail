@@ -25,6 +25,7 @@
 
 package jodd.mail;
 
+import jakarta.activation.FileDataSource;
 import jakarta.mail.Address;
 import jakarta.mail.Flags;
 import jakarta.mail.Message;
@@ -443,12 +444,16 @@ public class ReceivedEmail extends CommonEmail<ReceivedEmail> {
 	 */
 	private ReceivedEmail addAttachment(final Part part, final InputStream content, final File attachmentStorage) throws MessagingException, IOException {
 		final EmailAttachmentBuilder builder = addAttachmentInfo(part);
-		builder.content(content, part.getContentType());
 		if (attachmentStorage != null) {
-			final String name = sanitizeFileName(messageId) + "-" + (this.attachments().size() + 1);
-			return storeAttachment(builder.buildFileDataSource(name, attachmentStorage));
+			// If we have an attachmentStorage, we can save memory by consequently using FileDataSource.
+			final String attStoreFileName = sanitizeFileName(messageId) + "-" + (this.attachments().size() + 1);
+			final File attStoreFile = builder.writeToAttachmentStore(content, attachmentStorage, attStoreFileName);
+			builder.content(new FileDataSource(attStoreFile));
+			return storeAttachment(builder.buildFileDataSource(attStoreFileName, attachmentStorage));
+		} else {
+			builder.content(content, part.getContentType());
+			return storeAttachment(builder.buildByteArrayDataSource());
 		}
-		return storeAttachment(builder.buildByteArrayDataSource());
 	}
 
 	/**
